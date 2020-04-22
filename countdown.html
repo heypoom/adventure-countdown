@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Futura', sans-serif;
+
+        font-size: calc(6px + (26 - 14) * ((100vw - 300px) / (1600 - 300)));
+        text-align: center;
+      }
+
+      :root {
+        --yellow: #ffe166;
+        --white: #ecf0f1;
+        --lighter-yellow: #fff1b5;
+        --darker-yellow: #f1c40f;
+        --midnight-blue: #2c3e50;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        color: var(--white);
+        font-weight: 300;
+      }
+
+      h1 {
+        font-size: 4em;
+        margin-bottom: 40px;
+      }
+
+      h3 {
+        margin-top: 20px;
+        font-size: 2em;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+
+        background: var(--midnight-blue);
+      }
+
+      .highlight {
+        color: var(--yellow);
+      }
+
+      #days {
+        font-size: 1.8em;
+      }
+
+      #nextMonth {
+        font-size: 1.4em;
+      }
+
+      section {
+        text-align: left;
+      }
+
+      #progressBar,
+      #progressFill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 10px;
+      }
+
+      #progressBar {
+        background: var(--darker-yellow);
+        width: 0;
+        z-index: 2;
+      }
+
+      #progressFill {
+        background: var(--lighter-yellow);
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>
+        <span class="highlight" id="days">00</span> days on the adventure.
+      </h1>
+
+      <section>
+        <h3>
+          <span class="highlight" id="nextMonth">0</span> days until next month.
+        </h3>
+
+        <div class="events"></div>
+
+        <h3>
+          <span class="highlight" id="elapsed">00:00:00</span> until next day.
+        </h3>
+      </section>
+    </div>
+
+    <div id="progressBar"></div>
+    <div id="progressFill"></div>
+
+    <script>
+      function daysBetween(first, second) {
+        const diff = second.getTime() - first.getTime()
+        const days = diff / (1000 * 60 * 60 * 24)
+
+        return Math.floor(days)
+      }
+
+      const pad = (n) => String(n).padStart(2, 0)
+
+      function midnightDiff() {
+        let nextMidnight = new Date()
+        nextMidnight.setHours(24, 0, 0, 0)
+
+        let now = new Date()
+
+        return Math.floor((nextMidnight.getTime() - now.getTime()) / 1000)
+      }
+
+      function daysUntilNextMonth() {
+        let date = new Date()
+
+        const time = new Date(date.getTime())
+        time.setMonth(date.getMonth() + 1)
+        time.setDate(0)
+
+        return time.getDate() > date.getDate()
+          ? time.getDate() - date.getDate()
+          : 0
+      }
+
+      function timeUntilMidnight() {
+        let rest = midnightDiff()
+
+        const hours = Math.floor(rest / 3600)
+        rest = rest - hours * 3600
+
+        const minutes = Math.floor(rest / 60)
+        rest = rest - minutes * 60
+
+        const seconds = Math.floor(rest)
+
+        return `${pad(hours)} hour ${pad(minutes)} mins ${pad(seconds)} secs`
+      }
+
+      function registerEvents(rootSelector, events) {
+        let rootEl = document.querySelector(rootSelector)
+        let domStructure = ''
+
+        for (let [name, dateString] of events) {
+          domStructure += `<h3><span class="highlight" id="${name}">0</span> days until ${name}.</h3>`
+        }
+
+        rootEl.innerHTML = domStructure
+
+        let selectors = events.map(([name, date]) => [
+          new Date(date),
+          document.querySelector('#' + name),
+        ])
+
+        return () => {
+          let now = new Date()
+
+          selectors.forEach(([date, el]) => {
+            el.textContent = daysBetween(now, date)
+          })
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM Content Loaded')
+
+        const update = registerEvents('.events', [
+          ['birthday', '07-11-2020'],
+          ['camp', '07-24-2020'],
+        ])
+
+        const daysEl = document.querySelector('#days')
+        const elapsedEl = document.querySelector('#elapsed')
+        const nextMonthEl = document.querySelector('#nextMonth')
+        const progressBarEl = document.querySelector('#progressBar')
+
+        const leftCompanyDate = new Date('03-06-2020')
+
+        setInterval(() => {
+          const now = new Date()
+
+          daysEl.textContent = daysBetween(leftCompanyDate, now)
+          nextMonthEl.textContent = daysUntilNextMonth()
+          elapsedEl.textContent = timeUntilMidnight()
+
+          update()
+
+          let progress = Math.floor((midnightDiff() / (24 * 60 * 60)) * 100)
+          progress = Math.abs(100 - progress)
+
+          progressBar.style.width = `${progress}%`
+        }, 1000)
+      })
+    </script>
+  </body>
+</html>
